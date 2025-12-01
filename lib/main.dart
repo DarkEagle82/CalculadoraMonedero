@@ -5,18 +5,15 @@ import 'package:myapp/theme_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:myapp/notification_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializar el servicio de notificaciones
-  await NotificationService().init();
+  // Inicializar y configurar el servicio de notificaciones
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.requestPermissions();
 
-  // Inicializar el AndroidAlarmManager
-  await AndroidAlarmManager.initialize();
-  
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
@@ -91,7 +88,6 @@ class MyApp extends StatelessWidget {
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeProvider.themeMode,
-          // Configuración de localización para el idioma español
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

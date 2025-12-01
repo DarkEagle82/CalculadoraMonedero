@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/alarm_helpers.dart';
 import 'package:myapp/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:myapp/theme_provider.dart';
@@ -58,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isAlarmScheduled = prefs.getBool('isAlarmScheduled') ?? false;
 
     if (!isAlarmScheduled) {
-      scheduleMonthlyAlarm();
+      await _notificationService.scheduleMonthlyReminder(DateTime.now(), menuPrice, acogidaPrice);
       await prefs.setBool('isAlarmScheduled', true);
       debugPrint("Alarma mensual inicial programada automáticamente.");
     }
@@ -135,19 +134,19 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Calculadora de Monedero'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.science_outlined),
+            icon: const Icon(Icons.alarm_on_rounded),
             onPressed: () {
-              scheduleTestMonthlyAlarm();
+               _notificationService.scheduleMonthlyReminder(DateTime.now(), menuPrice, acogidaPrice);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'Alarma de prueba mensual programada para dentro de 10 segundos.',
+                    'Recordatorio mensual programado.',
                   ),
                   duration: Duration(seconds: 3),
                 ),
               );
             },
-            tooltip: 'Probar Alarma Mensual',
+            tooltip: 'Programar Recordatorio Mensual',
           ),
           IconButton(
             icon: Icon(

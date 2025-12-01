@@ -16,15 +16,16 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   # ACTUALIZADO a las últimas versiones para compatibilidad
-  flutter_local_notifications: ^17.2.1
-  timezone: ^0.9.4
-  android_alarm_manager_plus: ^5.0.0
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
   shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  mockito: ^5.6.1
+  build_runner: ^2.10.4
 
 flutter:
   uses-material-design: true
