@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/notification_service.dart';
+import 'package:calculadora_monedero/notification_service.dart';
 import 'package:provider/provider.dart';
-import 'package:myapp/theme_provider.dart';
+import 'package:calculadora_monedero/theme_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:myapp/holidays.dart';
-import 'package:myapp/app_constants.dart'; // Importar constantes
+import 'package:calculadora_monedero/holidays.dart';
+import 'package:calculadora_monedero/app_constants.dart'; // Importar constantes
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

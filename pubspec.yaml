@@ -1,31 +1,33 @@
-name: myapp
+name: calculadora_monedero
 description: "A new Flutter project."
+
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.0
+  sdk: '>=3.4.3 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  table_calendar: ^3.2.0
-  google_fonts: ^6.3.2
-  provider: ^6.1.5+1
   flutter_localizations:
     sdk: flutter
-  # ACTUALIZADO a las últimas versiones para compatibilidad
-  flutter_local_notifications: ^19.5.0
-  timezone: ^0.10.1
-  shared_preferences: ^2.5.3
+  cupertino_icons: ^1.0.6
+  shared_preferences: ^2.2.3
+  flutter_local_notifications: ^17.2.1+1
+  timezone: ^0.9.4
+  flutter_timezone: ^5.0.1
+  provider: ^6.1.2
+  table_calendar: ^3.1.2
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  mockito: ^5.6.1
-  build_runner: ^2.10.4
+  flutter_lints: ^3.0.0
+  mockito: ^5.4.4
+  build_runner: ^2.4.11
 
 flutter:
   uses-material-design: true

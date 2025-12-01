@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:myapp/notification_service.dart';
+import 'package:calculadora_monedero/notification_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 void main() {

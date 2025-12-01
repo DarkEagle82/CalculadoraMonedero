@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:myapp/home_screen.dart';
-import 'package:myapp/theme_provider.dart';
+import 'package:calculadora_monedero/home_screen.dart';
+import 'package:calculadora_monedero/theme_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:myapp/notification_service.dart';
+import 'package:calculadora_monedero/notification_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
