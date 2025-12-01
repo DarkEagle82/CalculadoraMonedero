@@ -1,16 +1,36 @@
-# myapp
+# Calculadora Monedero Wallet Calculator
 
-A new Flutter project.
+Una aplicación en Flutter diseñada para ayudarte a gestionar tus finanzas personales con recordatorios inteligentes.
 
-## Getting Started
+## ✨ Características Principales
 
-This project is a starting point for a Flutter application.
+*   **Calculadora Integrada:** Realiza cálculos rápidos sin salir de la aplicación.
+*   **Recordatorios Inteligentes:** Programa recordatorios mensuales para pagos, ahorros o cualquier evento financiero importante.
+*   **Notificaciones Push:** Recibe alertas directamente en tu dispositivo para no olvidar ninguna fecha clave.
+*   **Diseño Limpio y Funcional:** Una interfaz de usuario intuitiva construida con Flutter, enfocada en la facilidad de uso.
 
-A few resources to get you started if this is your first Flutter project:
+## 🚀 Cómo Empezar
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Para ejecutar este proyecto localmente, asegúrate de tener el [SDK de Flutter](https://flutter.dev/docs/get-started/install) instalado.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1.  **Clona el repositorio:**
+    ```sh
+    git clone https://github.com/DarkEagle82/CalculadoraMonedero.git
+    ```
+2.  **Entra en el directorio del proyecto:**
+    ```sh
+    cd CalculadoraMonedero
+    ```
+3.  **Instala las dependencias:**
+    ```sh
+    flutter pub get
+    ```
+4.  **Ejecuta la aplicación:**
+    ```sh
+    flutter run
+    ```
+
+## 🛠️ Construido Con
+
+*   [Flutter](https://flutter.dev/) - Framework para construir aplicaciones multiplataforma de alta calidad.
+*   [Dart](https://dart.dev/) - Lenguaje de programación optimizado para UI.
