@@ -13,6 +13,7 @@ import {
   Clock,
   Euro,
   RotateCcw,
+  Settings,
 } from 'lucide-react';
 import { Calendar } from './Calendar';
 import { AppConstants } from '../constants/appConstants';
@@ -30,19 +31,21 @@ export const HomeScreen: React.FC = () => {
 
   const [menuPriceStr, setMenuPriceStr] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('menuPrice');
-      return saved ? saved : AppConstants.defaultMenuPrice.toString();
+      const saved = localStorage.getItem(AppConstants.STORAGE_KEY_CURRENT_MENU);
+      if (saved) return saved;
+      return AppConstants.getDefaultMenuPrice().toString();
     } catch {
-      return AppConstants.defaultMenuPrice.toString();
+      return AppConstants.getDefaultMenuPrice().toString();
     }
   });
 
   const [acogidaPriceStr, setAcogidaPriceStr] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('acogidaPrice');
-      return saved ? saved : AppConstants.defaultAcogidaPrice.toString();
+      const saved = localStorage.getItem(AppConstants.STORAGE_KEY_CURRENT_ACOGIDA);
+      if (saved) return saved;
+      return AppConstants.getDefaultAcogidaPrice().toString();
     } catch {
-      return AppConstants.defaultAcogidaPrice.toString();
+      return AppConstants.getDefaultAcogidaPrice().toString();
     }
   });
 
@@ -68,16 +71,55 @@ export const HomeScreen: React.FC = () => {
   const [snackBarMessage, setSnackBarMessage] = useState<string | null>(null);
   const [showHolidaysModal, setShowHolidaysModal] = useState<boolean>(false);
   const [showReminderModal, setShowReminderModal] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [settingMenuStr, setSettingMenuStr] = useState<string>('');
+  const [settingAcogidaStr, setSettingAcogidaStr] = useState<string>('');
 
-  // Save prices on change
+  // Save current prices on change
   useEffect(() => {
     try {
-      localStorage.setItem('menuPrice', menuPriceStr);
-      localStorage.setItem('acogidaPrice', acogidaPriceStr);
+      localStorage.setItem(AppConstants.STORAGE_KEY_CURRENT_MENU, menuPriceStr);
+      localStorage.setItem(AppConstants.STORAGE_KEY_CURRENT_ACOGIDA, acogidaPriceStr);
     } catch {
       // ignore
     }
   }, [menuPriceStr, acogidaPriceStr]);
+
+  const openSettingsModal = () => {
+    setSettingMenuStr(AppConstants.getDefaultMenuPrice().toString());
+    setSettingAcogidaStr(AppConstants.getDefaultAcogidaPrice().toString());
+    setShowSettingsModal(true);
+  };
+
+  const handleSaveDefaults = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const parsedMenu = parseFloat(settingMenuStr.replace(',', '.'));
+    const parsedAcogida = parseFloat(settingAcogidaStr.replace(',', '.'));
+
+    if (isNaN(parsedMenu) || parsedMenu < 0 || isNaN(parsedAcogida) || parsedAcogida < 0) {
+      setSnackBarMessage('Por favor introduce precios válidos (números mayores o iguales a 0).');
+      return;
+    }
+
+    AppConstants.saveDefaultPrices(parsedMenu, parsedAcogida);
+    setMenuPriceStr(parsedMenu.toString());
+    setAcogidaPriceStr(parsedAcogida.toString());
+
+    setShowSettingsModal(false);
+    setSnackBarMessage(`Nuevos precios por defecto guardados: Menú ${parsedMenu.toFixed(2)} €, Acogida ${parsedAcogida.toFixed(2)} €.`);
+    setTimeout(() => setSnackBarMessage(null), 3500);
+  };
+
+  const handleResetFactoryDefaults = () => {
+    AppConstants.resetToFactoryDefaults();
+    setSettingMenuStr(AppConstants.factoryMenuPrice.toString());
+    setSettingAcogidaStr(AppConstants.factoryAcogidaPrice.toString());
+    setMenuPriceStr(AppConstants.factoryMenuPrice.toString());
+    setAcogidaPriceStr(AppConstants.factoryAcogidaPrice.toString());
+    setShowSettingsModal(false);
+    setSnackBarMessage(`Restablecido a valores de fábrica: Menú ${AppConstants.factoryMenuPrice.toFixed(2)} €, Acogida ${AppConstants.factoryAcogidaPrice.toFixed(2)} €.`);
+    setTimeout(() => setSnackBarMessage(null), 3500);
+  };
 
   // Initial alarm auto-scheduling mirroring Flutter initState:
   // _loadPrices(); _notificationService.requestPermissions(); _scheduleInitialAlarm();
@@ -176,9 +218,15 @@ export const HomeScreen: React.FC = () => {
   };
 
   const resetToDefaults = () => {
-    setMenuPriceStr(AppConstants.defaultMenuPrice.toString());
-    setAcogidaPriceStr(AppConstants.defaultAcogidaPrice.toString());
+    const defMenu = AppConstants.getDefaultMenuPrice();
+    const defAcogida = AppConstants.getDefaultAcogidaPrice();
+    setMenuPriceStr(defMenu.toString());
+    setAcogidaPriceStr(defAcogida.toString());
     setTotalMonederoStr('0');
+    setSnackBarMessage(`Valores por defecto aplicados: Menú ${defMenu.toFixed(2)} €, Acogida ${defAcogida.toFixed(2)} €.`);
+    setTimeout(() => {
+      setSnackBarMessage(null);
+    }, 3000);
   };
 
   return (
@@ -212,6 +260,15 @@ export const HomeScreen: React.FC = () => {
               aria-label="Programar Recordatorio Mensual"
             >
               <Bell className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={openSettingsModal}
+              className="p-2 rounded-full hover:bg-white/15 active:scale-95 transition-all text-white/90 hover:text-white"
+              title="Configurar precios por defecto"
+              aria-label="Configurar precios por defecto"
+            >
+              <Settings className="w-5 h-5" />
             </button>
 
             <button
@@ -268,19 +325,29 @@ export const HomeScreen: React.FC = () => {
 
         {/* Price Inputs Card */}
         <section className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 sm:p-6 transition-colors">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
             <h2 className="text-base sm:text-lg font-bold font-oswald uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               Parámetros de Cálculo
             </h2>
-            <button
-              onClick={resetToDefaults}
-              className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 hover:underline"
-              title="Restaurar valores por defecto"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Valores por defecto
-            </button>
+            <div className="flex items-center space-x-2.5">
+              <button
+                onClick={resetToDefaults}
+                className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                title="Restaurar a los precios por defecto configurados"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Valores por defecto
+              </button>
+              <button
+                onClick={openSettingsModal}
+                className="flex items-center gap-1 text-xs text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/60 px-2.5 py-1 rounded-lg font-medium transition-colors border border-purple-200 dark:border-purple-800/60"
+                title="Personalizar precios por defecto"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Configurar por defecto
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -558,6 +625,125 @@ export const HomeScreen: React.FC = () => {
             <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
               <button
                 onClick={() => setShowReminderModal(false)}
+                className="px-4 py-2 text-sm font-medium rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal (Configuración de Precios por Defecto) */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-gray-200 dark:border-gray-800 animate-fade-in">
+            <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-purple-50 dark:bg-purple-950/40">
+              <div className="flex items-center space-x-2">
+                <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <h3 className="font-bold font-oswald text-lg text-gray-900 dark:text-white">
+                  Configurar Precios por Defecto
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="p-1 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDefaults} className="p-5 space-y-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                Personaliza los importes predeterminados que usará la aplicación al iniciarse, al pulsar <em>«Valores por defecto»</em> y en las proyecciones de recordatorios mensuales.
+              </p>
+
+              <div className="space-y-3">
+                {/* Menú por defecto */}
+                <div>
+                  <label
+                    htmlFor="defaultMenuInput"
+                    className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Precio menú diario por defecto (€)
+                  </label>
+                  <div className="relative rounded-xl shadow-xs">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <Utensils className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      id="defaultMenuInput"
+                      value={settingMenuStr}
+                      onChange={e => setSettingMenuStr(e.target.value)}
+                      placeholder="7.00"
+                      className="block w-full pl-9 pr-10 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-all font-mono"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400 text-sm">
+                      €
+                    </div>
+                  </div>
+                </div>
+
+                {/* Acogida por defecto */}
+                <div>
+                  <label
+                    htmlFor="defaultAcogidaInput"
+                    className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Precio acogida por defecto (€)
+                  </label>
+                  <div className="relative rounded-xl shadow-xs">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      id="defaultAcogidaInput"
+                      value={settingAcogidaStr}
+                      onChange={e => setSettingAcogidaStr(e.target.value)}
+                      placeholder="16.97"
+                      className="block w-full pl-9 pr-10 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-all font-mono"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400 text-sm">
+                      €
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-900/60 rounded-xl text-xs text-gray-500 dark:text-gray-400 space-y-1 border border-gray-100 dark:border-gray-800">
+                <div className="font-medium text-gray-700 dark:text-gray-300">
+                  Valores de fábrica originales:
+                </div>
+                <div>&bull; Menú: <strong>{AppConstants.factoryMenuPrice.toFixed(2)} €</strong></div>
+                <div>&bull; Acogida: <strong>{AppConstants.factoryAcogidaPrice.toFixed(2)} €</strong></div>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 px-4 text-xs font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 active:scale-98 transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Guardar como mis precios por defecto
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetFactoryDefaults}
+                  className="w-full py-2 px-4 text-xs font-medium rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Restablecer a valores de fábrica ({AppConstants.factoryMenuPrice.toFixed(2)} € / {AppConstants.factoryAcogidaPrice.toFixed(2)} €)
+                </button>
+              </div>
+            </form>
+
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(false)}
                 className="px-4 py-2 text-sm font-medium rounded-xl bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
               >
                 Cerrar
