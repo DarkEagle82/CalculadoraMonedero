@@ -1,14 +1,17 @@
-// Holidays ported directly from lib/holidays.dart
+// Holidays ported and customizable directly from the app
 // Months in JS Date: 0 = Enero, 1 = Febrero, ..., 8 = Septiembre, 9 = Octubre, 10 = Noviembre, 11 = Diciembre
 
 export interface HolidayEntry {
+  id?: string;
   year: number;
   month: number; // 1-12
   day: number;
   name?: string;
 }
 
-export const HOLIDAYS_DATA: HolidayEntry[] = [
+export const STORAGE_KEY_HOLIDAYS = 'custom_holidays_data';
+
+export const DEFAULT_HOLIDAYS_DATA: HolidayEntry[] = [
   // 2025
   { year: 2025, month: 9, day: 11, name: 'Diada Nacional de Catalunya' },
   { year: 2025, month: 10, day: 31, name: 'Día no lectivo / Festivo' },
@@ -41,6 +44,50 @@ export const HOLIDAYS_DATA: HolidayEntry[] = [
   { year: 2026, month: 5, day: 11, name: 'Festivo local' },
 ];
 
+// Compatibility export
+export const HOLIDAYS_DATA = DEFAULT_HOLIDAYS_DATA;
+
+/**
+ * Obtiene la lista de festivos almacenados en localStorage o los de fábrica
+ */
+export function getStoredHolidays(): HolidayEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_HOLIDAYS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading stored holidays:', e);
+  }
+  return [...DEFAULT_HOLIDAYS_DATA];
+}
+
+/**
+ * Guarda la lista de festivos en localStorage
+ */
+export function saveStoredHolidays(holidays: HolidayEntry[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_HOLIDAYS, JSON.stringify(holidays));
+  } catch (e) {
+    console.warn('Error saving stored holidays:', e);
+  }
+}
+
+/**
+ * Restablece los festivos a los valores originales de fábrica
+ */
+export function resetStoredHolidays(): HolidayEntry[] {
+  try {
+    localStorage.removeItem(STORAGE_KEY_HOLIDAYS);
+  } catch (e) {
+    console.warn('Error resetting stored holidays:', e);
+  }
+  return [...DEFAULT_HOLIDAYS_DATA];
+}
+
 export function isSameDay(a: Date | null | undefined, b: Date | null | undefined): boolean {
   if (!a || !b) return false;
   return (
@@ -50,18 +97,20 @@ export function isSameDay(a: Date | null | undefined, b: Date | null | undefined
   );
 }
 
-export function isHoliday(date: Date): boolean {
+export function isHoliday(date: Date, holidaysList?: HolidayEntry[]): boolean {
+  const list = holidaysList || getStoredHolidays();
   const y = date.getFullYear();
   const m = date.getMonth() + 1; // 1-12
   const d = date.getDate();
-  return HOLIDAYS_DATA.some(h => h.year === y && h.month === m && h.day === d);
+  return list.some(h => h.year === y && h.month === m && h.day === d);
 }
 
-export function getHolidayInfo(date: Date): HolidayEntry | undefined {
+export function getHolidayInfo(date: Date, holidaysList?: HolidayEntry[]): HolidayEntry | undefined {
+  const list = holidaysList || getStoredHolidays();
   const y = date.getFullYear();
   const m = date.getMonth() + 1;
   const d = date.getDate();
-  return HOLIDAYS_DATA.find(h => h.year === y && h.month === m && h.day === d);
+  return list.find(h => h.year === y && h.month === m && h.day === d);
 }
 
 export function isWeekend(date: Date): boolean {
@@ -69,10 +118,8 @@ export function isWeekend(date: Date): boolean {
   return day === 0 || day === 6;
 }
 
-// In Flutter: isSelectable = day.weekday < 6 && !holidays.any((holiday) => isSameDay(holiday, normalizedDay))
-// (Flutter weekday: 1 = Monday, ..., 5 = Friday, 6 = Saturday, 7 = Sunday)
-export function isSelectable(date: Date): boolean {
-  return !isWeekend(date) && !isHoliday(date);
+export function isSelectable(date: Date, holidaysList?: HolidayEntry[]): boolean {
+  return !isWeekend(date) && !isHoliday(date, holidaysList);
 }
 
 export function normalizeDate(date: Date): Date {

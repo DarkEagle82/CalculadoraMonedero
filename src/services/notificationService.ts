@@ -1,4 +1,4 @@
-import { isHoliday, isWeekend } from '../constants/holidays';
+import { isHoliday, isWeekend, HolidayEntry } from '../constants/holidays';
 
 const MONTH_NAMES_ES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -23,7 +23,8 @@ export class NotificationService {
   static calculateNextMonthCost(
     currentDate: Date,
     menuPrice: number,
-    acogidaPrice: number
+    acogidaPrice: number,
+    holidaysList?: HolidayEntry[]
   ): NextMonthCostResult {
     // Next month: JS Date constructor handles overflow automatically
     const currentYear = currentDate.getFullYear();
@@ -40,7 +41,7 @@ export class NotificationService {
     const cursor = new Date(firstDay);
 
     while (cursor <= lastDay) {
-      if (!isWeekend(cursor) && !isHoliday(cursor)) {
+      if (!isWeekend(cursor) && !isHoliday(cursor, holidaysList)) {
         schoolDays++;
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -98,9 +99,10 @@ export class NotificationService {
   static scheduleMonthlyReminder(
     currentDate: Date,
     menuPrice: number,
-    acogidaPrice: number
+    acogidaPrice: number,
+    holidaysList?: HolidayEntry[]
   ): { scheduledDate: Date; nextMonthInfo: NextMonthCostResult; message: string } {
-    const nextMonthInfo = this.calculateNextMonthCost(currentDate, menuPrice, acogidaPrice);
+    const nextMonthInfo = this.calculateNextMonthCost(currentDate, menuPrice, acogidaPrice, holidaysList);
     const scheduledDate = this.getNextScheduledDate(currentDate);
 
     const message = `Recuerda añadir ${nextMonthInfo.totalCost.toFixed(2)} € para cubrir los gastos de ${nextMonthInfo.monthName}.`;

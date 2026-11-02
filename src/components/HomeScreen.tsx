@@ -14,10 +14,20 @@ import {
   Euro,
   RotateCcw,
   Settings,
+  Plus,
+  Trash2,
+  Search,
 } from 'lucide-react';
 import { Calendar } from './Calendar';
 import { AppConstants } from '../constants/appConstants';
-import { isHoliday, isWeekend, HOLIDAYS_DATA } from '../constants/holidays';
+import {
+  isHoliday,
+  isWeekend,
+  HolidayEntry,
+  getStoredHolidays,
+  saveStoredHolidays,
+  resetStoredHolidays,
+} from '../constants/holidays';
 import { NotificationService } from '../services/notificationService';
 import { useTheme } from '../context/ThemeContext';
 
@@ -75,6 +85,66 @@ export const HomeScreen: React.FC = () => {
   const [settingMenuStr, setSettingMenuStr] = useState<string>('');
   const [settingAcogidaStr, setSettingAcogidaStr] = useState<string>('');
 
+  // Holidays state and management
+  const [holidaysList, setHolidaysList] = useState<HolidayEntry[]>(() => getStoredHolidays());
+  const [newHolidayDate, setNewHolidayDate] = useState<string>('');
+  const [newHolidayName, setNewHolidayName] = useState<string>('');
+  const [holidaySearchQuery, setHolidaySearchQuery] = useState<string>('');
+  const [holidayYearFilter, setHolidayYearFilter] = useState<string>('all');
+
+  const handleAddHoliday = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHolidayDate) {
+      setSnackBarMessage('Por favor selecciona una fecha para el festivo.');
+      return;
+    }
+
+    const [yearStr, monthStr, dayStr] = newHolidayDate.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+
+    const exists = holidaysList.some(h => h.year === year && h.month === month && h.day === day);
+    if (exists) {
+      setSnackBarMessage(`Ya existe un festivo registrado para el ${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}.`);
+      return;
+    }
+
+    const updated = [
+      ...holidaysList,
+      {
+        year,
+        month,
+        day,
+        name: newHolidayName.trim() || 'Día no lectivo / Festivo',
+      },
+    ].sort((a, b) => new Date(a.year, a.month - 1, a.day).getTime() - new Date(b.year, b.month - 1, b.day).getTime());
+
+    setHolidaysList(updated);
+    saveStoredHolidays(updated);
+    setNewHolidayDate('');
+    setNewHolidayName('');
+    setSnackBarMessage(`Festivo añadido: ${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}.`);
+    setTimeout(() => setSnackBarMessage(null), 3000);
+  };
+
+  const handleDeleteHoliday = (target: HolidayEntry) => {
+    const updated = holidaysList.filter(
+      h => !(h.year === target.year && h.month === target.month && h.day === target.day)
+    );
+    setHolidaysList(updated);
+    saveStoredHolidays(updated);
+    setSnackBarMessage(`Festivo eliminado: ${target.day.toString().padStart(2, '0')}/${target.month.toString().padStart(2, '0')}/${target.year}.`);
+    setTimeout(() => setSnackBarMessage(null), 3000);
+  };
+
+  const handleResetHolidays = () => {
+    const defaultList = resetStoredHolidays();
+    setHolidaysList(defaultList);
+    setSnackBarMessage('Se han restablecido los festivos oficiales de fábrica.');
+    setTimeout(() => setSnackBarMessage(null), 3500);
+  };
+
   // Save current prices on change
   useEffect(() => {
     try {
@@ -127,13 +197,13 @@ export const HomeScreen: React.FC = () => {
     try {
       const isAlarmScheduled = localStorage.getItem('isAlarmScheduled') === 'true';
       if (!isAlarmScheduled) {
-        NotificationService.scheduleMonthlyReminder(new Date(), menuPrice, acogidaPrice);
+        NotificationService.scheduleMonthlyReminder(new Date(), menuPrice, acogidaPrice, holidaysList);
         console.log('Alarma mensual inicial programada automáticamente.');
       }
     } catch {
       // ignore
     }
-  }, [menuPrice, acogidaPrice]);
+  }, [menuPrice, acogidaPrice, holidaysList]);
 
   // Calculate school days between startDate and endDate
   const calculateDays = useCallback((): { count: number; amount: number } => {
@@ -148,7 +218,7 @@ export const HomeScreen: React.FC = () => {
     const current = new Date(startNorm);
 
     while (current <= endNorm) {
-      if (!isHoliday(current) && !isWeekend(current)) {
+      if (!isHoliday(current, holidaysList) && !isWeekend(current)) {
         count++;
       }
       current.setDate(current.getDate() + 1);
@@ -156,14 +226,36 @@ export const HomeScreen: React.FC = () => {
 
     const amount = count * menuPrice + acogidaPrice - totalMonedero;
     return { count, amount };
-  }, [startDate, endDate, menuPrice, acogidaPrice, totalMonedero]);
+  }, [startDate, endDate, menuPrice, acogidaPrice, totalMonedero, holidaysList]);
 
   const { count: schoolDays, amount: amountToAdd } = calculateDays();
 
   // Next month calculation for monthly reminder
   const nextMonthInfo = useMemo(() => {
-    return NotificationService.calculateNextMonthCost(new Date(), menuPrice, acogidaPrice);
-  }, [menuPrice, acogidaPrice]);
+    return NotificationService.calculateNextMonthCost(new Date(), menuPrice, acogidaPrice, holidaysList);
+  }, [menuPrice, acogidaPrice, holidaysList]);
+
+  // Filtered holidays for management modal
+  const filteredHolidays = useMemo(() => {
+    return holidaysList.filter(h => {
+      if (holidayYearFilter !== 'all' && h.year.toString() !== holidayYearFilter) {
+        return false;
+      }
+      if (holidaySearchQuery.trim()) {
+        const query = holidaySearchQuery.toLowerCase();
+        const dateStr = `${h.day.toString().padStart(2, '0')}/${h.month.toString().padStart(2, '0')}/${h.year}`;
+        const nameMatch = (h.name || '').toLowerCase().includes(query);
+        const dateMatch = dateStr.includes(query);
+        if (!nameMatch && !dateMatch) return false;
+      }
+      return true;
+    });
+  }, [holidaysList, holidayYearFilter, holidaySearchQuery]);
+
+  const availableYears = useMemo(() => {
+    const years = Array.from(new Set(holidaysList.map(h => h.year))).sort((a, b) => a - b);
+    return years;
+  }, [holidaysList]);
 
   // Date Selection logic mirroring Flutter onDaySelected
   const handleSelectDate = (selectedDay: Date) => {
@@ -193,7 +285,7 @@ export const HomeScreen: React.FC = () => {
   // Schedule monthly reminder button click
   const handleScheduleReminder = async () => {
     await NotificationService.requestPermissions();
-    NotificationService.scheduleMonthlyReminder(new Date(), menuPrice, acogidaPrice);
+    NotificationService.scheduleMonthlyReminder(new Date(), menuPrice, acogidaPrice, holidaysList);
 
     setSnackBarMessage('Recordatorio mensual programado.');
 
@@ -305,9 +397,11 @@ export const HomeScreen: React.FC = () => {
           </div>
           <button
             onClick={() => setShowHolidaysModal(true)}
-            className="self-start sm:self-auto text-xs font-semibold px-3 py-1.5 rounded-lg text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors whitespace-nowrap"
+            className="self-start sm:self-auto text-xs font-semibold px-3 py-1.5 rounded-lg text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors whitespace-nowrap flex items-center gap-1.5"
+            title="Configurar días festivos y no lectivos"
           >
-            Ver Festivos
+            <CalendarIcon className="w-3.5 h-3.5" />
+            Configurar Festivos ({holidaysList.length})
           </button>
         </section>
 
@@ -317,6 +411,7 @@ export const HomeScreen: React.FC = () => {
             startDate={startDate}
             endDate={endDate}
             focusedMonth={focusedMonth}
+            holidaysList={holidaysList}
             onFocusedMonthChange={setFocusedMonth}
             onSelectDate={handleSelectDate}
             onClearSelection={handleClearSelection}
@@ -514,49 +609,173 @@ export const HomeScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Holidays Modal */}
+      {/* Holidays Management Modal */}
       {showHolidaysModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800 animate-fade-in">
+            {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-purple-50 dark:bg-purple-950/40">
-              <div className="flex items-center space-x-2">
-                <CalendarIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                <h3 className="font-bold font-oswald text-lg text-gray-900 dark:text-white">
-                  Días Festivos y No Lectivos
-                </h3>
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 rounded-lg bg-purple-600 text-white shadow-xs">
+                  <CalendarIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold font-oswald text-lg text-gray-900 dark:text-white leading-tight">
+                    Configuración de Días Festivos
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {holidaysList.length} días no lectivos registrados en el monedero
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowHolidaysModal(false)}
-                className="p-1 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800"
+                className="p-1 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                title="Cerrar ventana"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 overflow-y-auto space-y-2 flex-1">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Estos días están preconfigurados como no lectivos y se descuentan automáticamente del cálculo de comedor escolar.
-              </p>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {HOLIDAYS_DATA.map((h, i) => (
-                  <div key={i} className="py-2.5 flex items-center justify-between text-sm">
-                    <span className="font-mono text-purple-700 dark:text-purple-300 font-medium">
-                      {h.day.toString().padStart(2, '0')}/{(h.month).toString().padStart(2, '0')}/{h.year}
-                    </span>
-                    <span className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm text-right">
-                      {h.name || 'Día no lectivo'}
-                    </span>
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+              {/* Form to add a new holiday */}
+              <div className="bg-purple-50/70 dark:bg-purple-950/30 p-3.5 sm:p-4 rounded-xl border border-purple-200/70 dark:border-purple-800/40">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 dark:text-purple-200 mb-2 flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  Añadir nuevo festivo / no lectivo
+                </h4>
+                <form onSubmit={handleAddHoliday} className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                  <div className="sm:col-span-4">
+                    <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-1">
+                      Fecha
+                    </label>
+                    <input
+                      type="date"
+                      value={newHolidayDate}
+                      onChange={e => setNewHolidayDate(e.target.value)}
+                      required
+                      className="block w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 outline-none font-mono"
+                    />
                   </div>
-                ))}
+
+                  <div className="sm:col-span-5">
+                    <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-1">
+                      Motivo o descripción
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Fiesta local, Libre disposición"
+                      value={newHolidayName}
+                      onChange={e => setNewHolidayName(e.target.value)}
+                      className="block w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <button
+                      type="submit"
+                      className="w-full py-1.5 px-3 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 active:scale-95 transition-all flex items-center justify-center gap-1 shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Añadir
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Filter & Search Bar */}
+              <div className="flex flex-col sm:flex-row gap-2 items-center justify-between pt-1">
+                <div className="relative w-full sm:w-64">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400">
+                    <Search className="w-3.5 h-3.5" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Filtrar por nombre o fecha..."
+                    value={holidaySearchQuery}
+                    onChange={e => setHolidaySearchQuery(e.target.value)}
+                    className="block w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-1 focus:ring-purple-600 outline-none"
+                  />
+                </div>
+
+                <div className="w-full sm:w-auto flex items-center space-x-2">
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 shrink-0">Año:</span>
+                  <select
+                    value={holidayYearFilter}
+                    onChange={e => setHolidayYearFilter(e.target.value)}
+                    className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none"
+                  >
+                    <option value="all">Todos ({holidaysList.length})</option>
+                    {availableYears.map(yr => (
+                      <option key={yr} value={yr.toString()}>
+                        {yr} ({holidaysList.filter(h => h.year === yr).length})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* List of holidays */}
+              <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 max-h-72 overflow-y-auto">
+                {filteredHolidays.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                    No se han encontrado días festivos con ese criterio.
+                  </div>
+                ) : (
+                  filteredHolidays.map((h, i) => {
+                    const dateObj = new Date(h.year, h.month - 1, h.day);
+                    const dayOfWeekName = dateObj.toLocaleDateString('es-ES', { weekday: 'short' });
+
+                    return (
+                      <div
+                        key={`${h.year}-${h.month}-${h.day}-${i}`}
+                        className="p-2.5 sm:px-3.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/60 transition-colors text-xs"
+                      >
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 uppercase shrink-0">
+                            {dayOfWeekName}
+                          </span>
+                          <span className="font-mono font-semibold text-gray-900 dark:text-white shrink-0">
+                            {h.day.toString().padStart(2, '0')}/{(h.month).toString().padStart(2, '0')}/{h.year}
+                          </span>
+                          <span className="text-gray-700 dark:text-gray-300 truncate" title={h.name}>
+                            {h.name || 'Día no lectivo'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteHoliday(h)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors ml-2 shrink-0"
+                          title="Eliminar este festivo"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex flex-wrap items-center justify-between gap-3">
               <button
-                onClick={() => setShowHolidaysModal(false)}
-                className="px-4 py-2 text-sm font-medium rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                type="button"
+                onClick={handleResetHolidays}
+                className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                title="Restablecer a la lista de festivos original"
               >
-                Entendido
+                <RotateCcw className="w-3.5 h-3.5" />
+                Restablecer festivos oficiales
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowHolidaysModal(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-xs"
+              >
+                Guardar y Cerrar
               </button>
             </div>
           </div>

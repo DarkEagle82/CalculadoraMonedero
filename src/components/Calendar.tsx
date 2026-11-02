@@ -1,11 +1,12 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
-import { isHoliday, isSameDay, isWeekend, isSelectable, getHolidayInfo } from '../constants/holidays';
+import { isHoliday, isSameDay, isWeekend, isSelectable, getHolidayInfo, HolidayEntry } from '../constants/holidays';
 
 interface CalendarProps {
   startDate: Date | null;
   endDate: Date | null;
   focusedMonth: Date;
+  holidaysList?: HolidayEntry[];
   onFocusedMonthChange: (date: Date) => void;
   onSelectDate: (date: Date) => void;
   onClearSelection: () => void;
@@ -22,6 +23,7 @@ export const Calendar: React.FC<CalendarProps> = ({
   startDate,
   endDate,
   focusedMonth,
+  holidaysList,
   onFocusedMonthChange,
   onSelectDate,
   onClearSelection,
@@ -96,7 +98,7 @@ export const Calendar: React.FC<CalendarProps> = ({
   };
 
   const isWorkDayInRange = (day: Date): boolean => {
-    return isInRange(day) && !isHoliday(day) && !isWeekend(day);
+    return isInRange(day) && !isHoliday(day, holidaysList) && !isWeekend(day);
   };
 
   const today = new Date();
@@ -177,12 +179,12 @@ export const Calendar: React.FC<CalendarProps> = ({
           const isEndpoint = isStart || isEnd;
           const isWorkDay = isWorkDayInRange(date);
           const inRange = isInRange(date);
-          const holiday = isHoliday(date);
+          const holiday = isHoliday(date, holidaysList);
           const weekend = isWeekend(date);
           const nonSchoolDay = holiday || weekend;
-          const selectable = isSelectable(date);
+          const selectable = isSelectable(date, holidaysList);
           const isTodayDate = isSameDay(today, date);
-          const holidayInfo = getHolidayInfo(date);
+          const holidayInfo = getHolidayInfo(date, holidaysList);
 
           // Determine styling exactly mirroring Flutter custom CalendarBuilders:
           // 1. If start or end: Blue circle (Colors.blue[600], text white)
