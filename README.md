@@ -1,36 +1,41 @@
-# Calculadora Monedero Wallet Calculator
+# Calculadora de Monedero
 
-Una aplicación en Flutter diseñada para ayudarte a gestionar tus finanzas personales con recordatorios inteligentes.
+Una aplicación web desarrollada con React, TypeScript y Tailwind CSS para calcular con precisión las recargas necesarias en monederos virtuales de comedor escolar y servicio de acogida, considerando el calendario lectivo oficial, fines de semana y días festivos.
 
 ## ✨ Características Principales
 
-*   **Calculadora Integrada:** Realiza cálculos rápidos sin salir de la aplicación.
-*   **Recordatorios Inteligentes:** Programa recordatorios mensuales para pagos, ahorros o cualquier evento financiero importante.
-*   **Notificaciones Push:** Recibe alertas directamente en tu dispositivo para no olvidar ninguna fecha clave.
-*   **Diseño Limpio y Funcional:** Una interfaz de usuario intuitiva construida con Flutter, enfocada en la facilidad de uso.
+* **Calendario Interactivo:**
+  * Selección de rango de fechas (inicio y fin) sobre un calendario mensual en español.
+  * Detección automática de fines de semana y festivos escolares (marcados en rojo).
+  * Marcado en verde de días lectivos computados y azul para los extremos seleccionados.
+* **Cálculo en Tiempo Real:**
+  * Cálculo dinámico de días lectivos según el rango seleccionado.
+  * Fórmula de cálculo: `(días_lectivos * precio_menú) + precio_acogida - total_monedero`.
+  * Precios configurables y persistentes en el navegador (menú diario por defecto: 7,00 €, acogida por defecto: 16,97 €).
+* **Recordatorio Mensual Inteligente:**
+  * Cálculo automático de previsión para el mes siguiente (`días lectivos mes siguiente * menú + acogida`).
+  * Integración con la Web Notifications API para alertas programadas a fin de mes.
+* **Material Design 3:**
+  * Paleta visual basada en el color semilla morado (`#673ab7`).
+  * Soporte completo para Tema Claro y Tema Oscuro.
+  * Tipografías Oswald (títulos) y Roboto (cuerpo e interfaces numéricas).
 
 ## 🚀 Cómo Empezar
 
-Para ejecutar este proyecto localmente, asegúrate de tener el [SDK de Flutter](https://flutter.dev/docs/get-started/install) instalado.
+```sh
+# Instalar dependencias
+npm install
 
-1.  **Clona el repositorio:**
-    ```sh
-    git clone https://github.com/DarkEagle82/CalculadoraMonedero.git
-    ```
-2.  **Entra en el directorio del proyecto:**
-    ```sh
-    cd CalculadoraMonedero
-    ```
-3.  **Instala las dependencias:**
-    ```sh
-    flutter pub get
-    ```
-4.  **Ejecuta la aplicación:**
-    ```sh
-    flutter run
-    ```
+# Iniciar servidor de desarrollo en puerto 3000
+npm run dev
 
-## 🛠️ Construido Con
+# Compilar para producción
+npm run build
+```
 
-*   [Flutter](https://flutter.dev/) - Framework para construir aplicaciones multiplataforma de alta calidad.
-*   [Dart](https://dart.dev/) - Lenguaje de programación optimizado para UI.
+## 🛠️ Tecnologías
+
+* [React](https://react.dev/) + [Vite](https://vitejs.dev/)
+* [TypeScript](https://www.typescriptlang.org/)
+* [Tailwind CSS](https://tailwindcss.com/)
+* [Lucide Icons](https://lucide.dev/)

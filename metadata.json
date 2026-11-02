@@ -1,0 +1,8 @@
+{
+  "name": "Calculadora de Monedero",
+  "description": "Calculadora de recargas para monedero de comedor escolar y acogida con calendario de días lectivos y festivos.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
